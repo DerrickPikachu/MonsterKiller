@@ -13,6 +13,7 @@ class Equipment;
 class Game;
 class Pikachu;
 class ThunderSword;
+class TADerrickChin;
 
 
 template<typename T>
@@ -69,6 +70,38 @@ public:
     }
     ~Character()= default;
 
+    void damaged(int damage) {
+        roundDamage += damage;
+    }
+
+    void defended(int defend) {
+        roundDefend += defend;
+    }
+
+    void enhanceHp(int hp) {
+        this->hp += hp;
+    }
+
+    void enhanceMp(int mp) {
+        this->mp += mp;
+    }
+
+    void enhanceAtk(int atk) {
+        this->attack += atk;
+    }
+
+    void enhanceDfc(int dfc) {
+        this->defence += dfc;
+    }
+
+    void enhanceMAtk(int mAtk) {
+        this->magicAttack += mAtk;
+    }
+
+    void enhanceSkCost(int skCost) {
+        this->skillCost += skCost;
+    }
+
     virtual void showInfo() {
         cout << "hp\t\tmp\t\tattack\t\tdefence\t\tmagic attack" << endl;
         cout << hp << "\t\t" << mp << "\t\t" << attack << "\t\t\t" << defence << "\t\t\t" << magicAttack << endl;
@@ -82,14 +115,6 @@ public:
 
     virtual bool isAlive() {
         return hp > 0;
-    }
-
-    void damaged(int damage) {
-        roundDamage += damage;
-    }
-
-    void defended(int defend) {
-        roundDefend += defend;
     }
 
     virtual void computeRoundResult() {
@@ -106,12 +131,12 @@ public:
 
 class Equipment {
 public:
-    virtual void equipEffect(Player* player) {}
+    virtual void equipEffect(Player* player, Monster* monster) {}
 };
 
 class Player : public Character {
 private:
-    vector<Equipment> playerEquip;
+    vector<Equipment*> playerEquip;
 
 protected:
     void actionAttack(Character* other) override {
@@ -145,14 +170,14 @@ public:
 //        // You can apply some information about the player skill
 //    }
 
-    void launchEquipmentEffect() {
+    void launchEquipmentEffect(Monster* monster) {
         for (auto& equip : playerEquip) {
-            equip.equipEffect(this);
+            equip->equipEffect(this, monster);
         }
     }
 
     void equip(Equipment* equipment) {
-        playerEquip.push_back(*equipment);
+        playerEquip.push_back(equipment);
     }
 };
 
@@ -186,15 +211,20 @@ public:
         int action = rand() % validActions + 1;
         this->doAction(action, other);
     }
+
+    virtual void reward(Player* player) {
+        player->equip(equipment);
+    }
 };
 
 
 class ThunderSword : public Equipment {
 public:
-    void equipEffect(Player* player) override {
+    void equipEffect(Player* player, Monster* monster) override {
         cout << "Thunder wrapping around the sword!" << endl;
         cout << "Player get more power!" << endl;
         cout << "atk + 5" << endl;
+        player->enhanceAtk(5);
     }
 };
 
@@ -234,6 +264,25 @@ public:
     Pikachu(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
         name = "Pikachu";
         equipment = new ThunderSword;
+    }
+};
+
+class TADerrickChin : public Monster {
+protected:
+    void actionAttack(Character* other) override {
+        cout << "TA choose attack" << endl;
+    }
+
+    void actionDefence(Character* other) override {
+        cout << "TA choose defence" << endl;
+    }
+
+    void actionSkill(Character* other) override {
+        cout << "TA choose to use skill" << endl;
+    }
+public:
+    TADerrickChin(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
+        name = "TADerrickChin";
     }
 };
 
@@ -320,7 +369,8 @@ public:
         player = new Player(100, 50, 15, 30, 35, 25);
 
         // Create monster
-        monsters.push_back(new Pikachu(100, 50, 20, 10, 50, 25));
+        monsters.push_back(new Pikachu(50, 50, 20, 10, 50, 25));
+        monsters.push_back(new TADerrickChin(100, 50, 30, 30, 30, 10));
 //        monsters.push_back(new Monster(100, 100, 100, 100, 100));
     }
 
@@ -351,12 +401,24 @@ public:
 
                 // Battle start, both character do their action
                 cout << "Battle!!" << endl;
+                cout << "Player action" << endl;
                 player->doAction(action, currentMonster);
+                cout << "-------------" << endl
+                     << "Monster action" << endl;
                 ((Monster *)currentMonster)->selectAction(player);
+                cout << "-------------" << endl
+                     << "equipment effect" << endl;
+                player->launchEquipmentEffect((Monster*)currentMonster);
+                cout << "-------------" << endl;
 
                 // Compute the round damage and result
                 player->computeRoundResult();
                 currentMonster->computeRoundResult();
+            }
+
+            if (player->isAlive() && !currentMonster->isAlive()) {
+                cout << "You defeat the Monster" << endl;
+                ((Monster*)currentMonster)->reward(player);
             }
 
             monsterId++;
