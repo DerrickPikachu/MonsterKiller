@@ -212,9 +212,7 @@ public:
         this->doAction(action, other);
     }
 
-    virtual void reward(Player* player) {
-        player->equip(equipment);
-    }
+    virtual void reward(Player* player) {}
 };
 
 
@@ -265,20 +263,36 @@ public:
         name = "Pikachu";
         equipment = new ThunderSword;
     }
+
+    void reward(Player* player) override {
+        player->equip(equipment);
+    }
 };
 
 class TADerrickChin : public Monster {
 protected:
     void actionAttack(Character* other) override {
         cout << "TA choose attack" << endl;
+        cout << "TA honor punch!!!!" << endl;
+        int damage = (int)(attack * 1.5);
+        other->damaged(damage);
+        cout << "TA make " << damage << " damage" << endl;
     }
 
     void actionDefence(Character* other) override {
         cout << "TA choose defence" << endl;
+        cout << "TA feel tired" << endl;
+        int defend = (int)(defence * 0.5);
+        this->defended(defend);
+        cout << "TA get defence " << defend << endl;
     }
 
     void actionSkill(Character* other) override {
         cout << "TA choose to use skill" << endl;
+        cout << "TA tell you that you will fail this course!!!" << endl;
+        int damage = (int)(magicAttack * 2);
+        other->damaged(damage);
+        cout << "TA make " << damage << " damage" << endl;
     }
 public:
     TADerrickChin(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
@@ -369,9 +383,9 @@ public:
         player = new Player(100, 50, 15, 30, 35, 25);
 
         // Create monster
-        monsters.push_back(new Pikachu(50, 50, 20, 10, 50, 25));
-        monsters.push_back(new TADerrickChin(100, 50, 30, 30, 30, 10));
-//        monsters.push_back(new Monster(100, 100, 100, 100, 100));
+        monsters.push_back(new Pikachu(50, 50, 20, 10, 30, 25));
+        monsters.push_back(new TADerrickChin(200, 50, 30, 30, 30, 10));
+        monsters.push_back(new Monster(100, 100, 100, 100, 100, 100));
     }
 
     // Check the current game status
