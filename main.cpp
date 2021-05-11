@@ -6,6 +6,8 @@
 
 using namespace std;
 
+
+// The declaration of the classes are all here
 class Character;
 class Player;
 class Monster;
@@ -16,6 +18,10 @@ class ThunderSword;
 class TADerrickChin;
 
 
+/* The Method Pointer class with template.
+ * This is the general form of method pointer(because of template)
+ * The method type I used here is:
+ * T functionName(T*) */
 template<typename T>
 class CallBack {
 public:
@@ -27,6 +33,10 @@ public:
 };
 
 
+/* The base class of all the other class
+ * This class is very important for this project(or game)
+ * You don't need to derived this class(except for class Player)
+ * I have defined another class that is more useful and easy to derived*/
 class Character {
 protected:
     int hp;
@@ -103,8 +113,8 @@ public:
     }
 
     virtual void showInfo() {
-        cout << "hp\t\tmp\t\tattack\t\tdefence\t\tmagic attack" << endl;
-        cout << hp << "\t\t" << mp << "\t\t" << attack << "\t\t\t" << defence << "\t\t\t" << magicAttack << endl;
+        cout << "hp\t\tmp\t\tattack\t\tdefence\t\tmagic attack\t\tskill cost" << endl;
+        cout << hp << "\t\t" << mp << "\t\t" << attack << "\t\t\t" << defence << "\t\t\t" << magicAttack << "\t\t\t" << skillCost << endl;
     }
 
     // function doAction is very important and will take the desired action for user.
@@ -129,11 +139,22 @@ public:
     }
 };
 
+/* Here is the class which derived by the specified equipment
+ * You can see the example in the sample.cpp
+ * If you want to give the equipment to the player,
+ * first you need to create a class derived from this class
+ * and after defeating the monster you can use Player::equip to give the equipment to player*/
 class Equipment {
 public:
     virtual void equipEffect(Player* player, Monster* monster) {}
 };
 
+
+/* The Player class is for the user
+ * you must complete the definition of this class
+ * I have define some attribute and important method to you
+ * If you don't really understand what the method will effect,
+ * please don't modify the code which I define for you*/
 class Player : public Character {
 private:
     vector<Equipment*> playerEquip;
@@ -170,18 +191,25 @@ public:
 //        // You can apply some information about the player skill
 //    }
 
+    /* This method is trying to iteratively launch the equipment effect
+     * If you don't understand the code inside the method, please don't modify it*/
     void launchEquipmentEffect(Monster* monster) {
         for (auto& equip : playerEquip) {
             equip->equipEffect(this, monster);
         }
     }
 
+    /* This method is used to equip the equipment*/
     void equip(Equipment* equipment) {
         playerEquip.push_back(equipment);
     }
 };
 
 
+/* Monster is the base class of all monsters
+ * Every monster "must" derived from this class
+ * and this is the most important part of this homework
+ * as the result, you should clearly understand what is Inheritance and Polymorphism*/
 class Monster : public Character {
 protected:
     string name;
@@ -189,7 +217,6 @@ protected:
 
     void actionAttack(Character* other) override {
         cout << "Monster attack" << endl;
-//        other->damaged(attack);
     }
 
     void actionDefence(Character* other) override {
@@ -204,6 +231,12 @@ public:
         srand(time(NULL));
     }
     ~Monster()= default;
+
+    void showInfo() override {
+        cout << "Monster Name: " << name << endl;
+        cout << "hp\t\tmp\t\tattack\t\tdefence\t\tmagic attack\t\tskill cost" << endl;
+        cout << hp << "\t\t" << mp << "\t\t" << attack << "\t\t\t" << defence << "\t\t\t" << magicAttack << "\t\t\t" << skillCost << endl;
+    }
 
     virtual void selectAction(Character* other) {
         cout << "Monster choose an action" << endl;
@@ -223,6 +256,13 @@ public:
         cout << "Player get more power!" << endl;
         cout << "atk + 5" << endl;
         player->enhanceAtk(5);
+    }
+};
+
+class TestEquip : public Equipment {
+public:
+    void equipEffect(Player* player, Monster* monster) override {
+        cout << "TA equipment!" << endl;
     }
 };
 
@@ -297,14 +337,22 @@ protected:
 public:
     TADerrickChin(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
         name = "TADerrickChin";
+        equipment = new TestEquip;
+    }
+
+    void reward(Player* player) {
+        player->equip(equipment);
     }
 };
 
-
+/* The Game is about controlling the game flow, monitoring the game state and providing the hole game experience
+ * There is only one thing you should modify here, that is inside the constructor
+ * You must create your monster here
+ * Just mention above, DO NOT modify the game flow if you don't really understand what is the game going on*/
 class Game {
 private:
     Player* player;
-    vector<Character*> monsters;
+    vector<Monster*> monsters;
 
     const vector<string> status = {"Game Over", "Playing"};
 
@@ -377,6 +425,8 @@ private:
         }
     }
 public:
+
+    /* You must create your monster here*/
     // Constructor
     Game() {
         // Create player
@@ -385,7 +435,7 @@ public:
         // Create monster
         monsters.push_back(new Pikachu(50, 50, 20, 10, 30, 25));
         monsters.push_back(new TADerrickChin(200, 50, 30, 30, 30, 10));
-        monsters.push_back(new Monster(100, 100, 100, 100, 100, 100));
+//        monsters.push_back(new Monster(100, 100, 100, 100, 100, 100));
     }
 
     // Check the current game status
@@ -402,7 +452,7 @@ public:
         int monsterId = 0;
 
         while (gameState() == status[1]) {
-            Character* currentMonster = this->monsters[monsterId];
+            Monster* currentMonster = this->monsters[monsterId];
 
             while (player->isAlive() && currentMonster->isAlive()) {
                 cout << "-------------------------------" << endl;
@@ -419,10 +469,10 @@ public:
                 player->doAction(action, currentMonster);
                 cout << "-------------" << endl
                      << "Monster action" << endl;
-                ((Monster *)currentMonster)->selectAction(player);
+                currentMonster->selectAction(player);
                 cout << "-------------" << endl
                      << "equipment effect" << endl;
-                player->launchEquipmentEffect((Monster*)currentMonster);
+                player->launchEquipmentEffect(currentMonster);
                 cout << "-------------" << endl;
 
                 // Compute the round damage and result
@@ -432,7 +482,7 @@ public:
 
             if (player->isAlive() && !currentMonster->isAlive()) {
                 cout << "You defeat the Monster" << endl;
-                ((Monster*)currentMonster)->reward(player);
+                currentMonster->reward(player);
             }
 
             monsterId++;
