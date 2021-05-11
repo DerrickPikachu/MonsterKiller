@@ -162,14 +162,22 @@ private:
 protected:
     void actionAttack(Character* other) override {
         cout << "player choose attack" << endl;
+        other->damaged(attack);
+        cout << "player make damage: " << attack << endl;
     }
 
     void actionDefence(Character* other) override {
         cout << "player choose defence" << endl;
+        this->defended(defence);
+        cout << "player get defence: " << defence << endl;
     }
 
     void actionSkill(Character* other) override {
         cout << "player choose to use skill" << endl;
+        other->damaged(magicAttack);
+        mp -= skillCost;
+        cout << "player cost " << skillCost << " mp to use skill" << endl
+             << "player make damage: " << magicAttack << endl;
     }
 
 public:
@@ -239,6 +247,102 @@ public:
     virtual void reward(Player* player) {}
 };
 
+
+class ThunderSword : public Equipment {
+public:
+    void equipEffect(Player* player, Monster* monster) override {
+        cout << "Thunder wrapping around the sword!" << endl;
+        cout << "Player get more power!" << endl;
+        cout << "atk + 5" << endl;
+        player->enhanceAtk(5);
+    }
+};
+
+class TestEquip : public Equipment {
+public:
+    void equipEffect(Player* player, Monster* monster) override {
+        cout << "TA equipment!" << endl;
+    }
+};
+
+
+class Pikachu : public Monster {
+protected:
+    void actionAttack(Character* other) override {
+        cout << "Pikachu choose attack" << endl;
+        int damage = (int)(attack * 0.6 + magicAttack * 0.4);
+        other->damaged(damage);
+        cout << "Pikachu attack damage: " << damage << endl;
+    }
+
+    void actionDefence(Character* other) override {
+        cout << "Pikachu choose defence" << endl;
+        int defend = (int)(defence * 0.8 + hp * 0.2);
+        this->defended(defend);
+        cout << "Pikachu defence value: " << defend << endl;
+    }
+
+    void actionSkill(Character* other) override {
+        cout << "Pikachu choose to use skill" << endl;
+        cout << "Volt Attack!!" << endl;
+
+        int damageToOpponent = (int)(magicAttack * 1.4);
+        int damageToPikachu = (int)(attack * 0.3);
+        other->damaged(damageToOpponent);
+        this->damaged(damageToPikachu);
+        mp -= skillCost;
+
+        cout << "Pikachu use " << skillCost << " mp to use skill" << endl;
+        cout << "damage to other: " << damageToOpponent << endl
+             << "damage to Pikachu: " << damageToPikachu << endl;
+    }
+
+public:
+    Pikachu(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
+        name = "Pikachu";
+        equipment = new ThunderSword;
+    }
+
+    void reward(Player* player) override {
+        player->equip(equipment);
+    }
+};
+
+class TADerrickChin : public Monster {
+protected:
+    void actionAttack(Character* other) override {
+        cout << "TA choose attack" << endl;
+        cout << "TA honor punch!!!!" << endl;
+        int damage = (int)(attack * 1.5);
+        other->damaged(damage);
+        cout << "TA make " << damage << " damage" << endl;
+    }
+
+    void actionDefence(Character* other) override {
+        cout << "TA choose defence" << endl;
+        cout << "TA feel tired" << endl;
+        int defend = (int)(defence * 0.5);
+        this->defended(defend);
+        cout << "TA get defence " << defend << endl;
+    }
+
+    void actionSkill(Character* other) override {
+        cout << "TA choose to use skill" << endl;
+        cout << "TA tell you that you will fail this course!!!" << endl;
+        int damage = (int)(magicAttack * 2);
+        other->damaged(damage);
+        cout << "TA make " << damage << " damage" << endl;
+    }
+public:
+    TADerrickChin(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
+        name = "TADerrickChin";
+        equipment = new TestEquip;
+    }
+
+    void reward(Player* player) {
+        player->equip(equipment);
+    }
+};
 
 /* The Game is about controlling the game flow, monitoring the game state and providing the hole game experience
  * There is only one thing you should modify here, that is inside the constructor
@@ -328,6 +432,9 @@ public:
         player = new Player(100, 50, 15, 30, 35, 25);
 
         // Create monster
+        monsters.push_back(new Pikachu(50, 50, 20, 10, 30, 25));
+        monsters.push_back(new TADerrickChin(200, 50, 30, 30, 30, 10));
+//        monsters.push_back(new Monster(100, 100, 100, 100, 100, 100));
     }
 
     // Check the current game status
