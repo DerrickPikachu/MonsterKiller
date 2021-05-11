@@ -6,6 +6,15 @@
 
 using namespace std;
 
+class Character;
+class Player;
+class Monster;
+class Equipment;
+class Game;
+class Pikachu;
+class ThunderSword;
+
+
 template<typename T>
 class CallBack {
 public:
@@ -24,6 +33,9 @@ protected:
     int attack;
     int defence;
     int magicAttack;
+    int skillCost;
+    int roundDamage;
+    int roundDefend;
     vector<CallBack<Character>> actions;
 
     virtual void actionAttack(Character* other) {
@@ -38,12 +50,15 @@ protected:
         cout << "you choose skill" << endl;
     }
 public:
-    Character(int hp, int mp, int atk, int dfc, int mAtk){
+    Character(int hp, int mp, int atk, int dfc, int mAtk, int skCost){
         this->hp = hp;
         this->mp = mp;
         this->attack = atk;
         this->defence = dfc;
         this->magicAttack = mAtk;
+        this->skillCost = skCost;
+        this->roundDamage = 0;
+        this->roundDefend = 0;
 
         CallBack<Character> action1(&Character::actionAttack);
         CallBack<Character> action2(&Character::actionDefence);
@@ -69,45 +84,87 @@ public:
         return hp > 0;
     }
 
-    void beDamaged(int damage) {
-        this->hp -= damage;
+    void damaged(int damage) {
+        roundDamage += damage;
+    }
+
+    void defended(int defend) {
+        roundDefend += defend;
+    }
+
+    virtual void computeRoundResult() {
+        int trueDamage = roundDamage - roundDefend;
+        hp -= (trueDamage < 0)? 0 : trueDamage;
+        roundDamage = 0;
+        roundDefend = 0;
+    }
+
+    virtual bool isMpEnough() {
+        return mp >= skillCost;
     }
 };
 
+class Equipment {
+public:
+    virtual void equipEffect(Player* player) {}
+};
 
 class Player : public Character {
+private:
+    vector<Equipment> playerEquip;
+
 protected:
     void actionAttack(Character* other) override {
-        cout << "player attack" << endl;
-        other->beDamaged(attack);
+        cout << "player choose attack" << endl;
+        other->damaged(attack);
+        cout << "player make damage: " << attack << endl;
     }
 
     void actionDefence(Character* other) override {
-        cout << "player defence" << endl;
+        cout << "player choose defence" << endl;
+        this->defended(defence);
+        cout << "player get defence: " << defence << endl;
     }
 
     void actionSkill(Character* other) override {
-        cout << "player skill" << endl;
+        cout << "player choose to use skill" << endl;
+        other->damaged(magicAttack);
+        mp -= skillCost;
+        cout << "player cost " << skillCost << " mp to use skill" << endl
+             << "player make damage: " << magicAttack << endl;
     }
+
 public:
-    Player(int hp, int mp, int atk, int dfc, int mAtk) : Character(hp, mp, atk, dfc, mAtk){}
+    Player(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Character(hp, mp, atk, dfc, mAtk, skCost){}
     ~Player()= default;
+    friend Equipment;
 
 //    void showInfo() override {
 //        cout << "hp\t\tmp\t\tattack\t\tdefence\t\tmagic attack" << endl;
 //        cout << hp << "\t\t" << mp << "\t\t" << attack << "\t\t\t" << defence << "\t\t\t" << magicAttack << endl;
 //        // You can apply some information about the player skill
 //    }
+
+    void launchEquipmentEffect() {
+        for (auto& equip : playerEquip) {
+            equip.equipEffect(this);
+        }
+    }
+
+    void equip(Equipment* equipment) {
+        playerEquip.push_back(*equipment);
+    }
 };
 
 
 class Monster : public Character {
 protected:
     string name;
+    Equipment* equipment;
 
     void actionAttack(Character* other) override {
         cout << "Monster attack" << endl;
-        other->beDamaged(attack);
+//        other->damaged(attack);
     }
 
     void actionDefence(Character* other) override {
@@ -118,17 +175,65 @@ protected:
         cout << "Monster skill" << endl;
     }
 public:
-    Monster(int hp, int mp, int atk, int dfc, int mAtk) : Character(hp, mp, atk, dfc, mAtk) {
+    Monster(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Character(hp, mp, atk, dfc, mAtk, skCost) {
         srand(time(NULL));
     }
     ~Monster()= default;
 
     virtual void selectAction(Character* other) {
         cout << "Monster choose an action" << endl;
-        int action = rand() % 3 + 1;
-        cout << action << endl;
+        int validActions = this->isMpEnough()? 3 : 2;
+        int action = rand() % validActions + 1;
         this->doAction(action, other);
-        cout << "bbbb" << endl;
+    }
+};
+
+
+class ThunderSword : public Equipment {
+public:
+    void equipEffect(Player* player) override {
+        cout << "Thunder wrapping around the sword!" << endl;
+        cout << "Player get more power!" << endl;
+        cout << "atk + 5" << endl;
+    }
+};
+
+
+class Pikachu : public Monster {
+protected:
+    void actionAttack(Character* other) override {
+        cout << "Pikachu choose attack" << endl;
+        int damage = (int)(attack * 0.6 + magicAttack * 0.4);
+        other->damaged(damage);
+        cout << "Pikachu attack damage: " << damage << endl;
+    }
+
+    void actionDefence(Character* other) override {
+        cout << "Pikachu choose defence" << endl;
+        int defend = (int)(defence * 0.8 + hp * 0.2);
+        this->defended(defend);
+        cout << "Pikachu defence value: " << defend << endl;
+    }
+
+    void actionSkill(Character* other) override {
+        cout << "Pikachu choose to use skill" << endl;
+        cout << "Volt Attack!!" << endl;
+
+        int damageToOpponent = (int)(magicAttack * 1.4);
+        int damageToPikachu = (int)(attack * 0.3);
+        other->damaged(damageToOpponent);
+        this->damaged(damageToPikachu);
+        mp -= skillCost;
+
+        cout << "Pikachu use " << skillCost << " mp to use skill" << endl;
+        cout << "damage to other: " << damageToOpponent << endl
+             << "damage to Pikachu: " << damageToPikachu << endl;
+    }
+
+public:
+    Pikachu(int hp, int mp, int atk, int dfc, int mAtk, int skCost) : Monster(hp, mp, atk, dfc, mAtk, skCost) {
+        name = "Pikachu";
+        equipment = new ThunderSword;
     }
 };
 
@@ -159,11 +264,21 @@ private:
                  << "1. attack" << endl
                  << "2. defence" << endl
                  << "3. skill" << endl;
+
+            // User input
             string tem;
             cin >> tem;
+
+            // Input check
             if (tem.size() == 1 && isdigit(tem[0])) {
                 action = tem[0] - '0';
             } else {
+                action = -1;
+            }
+
+            // MP check
+            if (!player->isMpEnough() && action == 3) {
+                cout << "You don't have enough mp!" << endl;
                 action = -1;
             }
         }
@@ -184,6 +299,11 @@ private:
         monsters[monsterId]->showInfo();
     }
 
+    void showPlayerInfo() {
+        cout << "Your information detail" << endl;
+        player->showInfo();
+    }
+
     void showResult() {
         if (player->isAlive()) {
             // Player win the game
@@ -197,11 +317,10 @@ public:
     // Constructor
     Game() {
         // Create player
-        player = new Player(100, 50, 50, 50, 70);
+        player = new Player(100, 50, 15, 30, 35, 25);
 
         // Create monster
-        monsters.push_back(new Monster(100, 100, 100, 100, 100));
-//        monsters.push_back(new Monster(100, 100, 100, 100, 100));
+        monsters.push_back(new Pikachu(100, 50, 20, 10, 50, 25));
 //        monsters.push_back(new Monster(100, 100, 100, 100, 100));
     }
 
@@ -223,20 +342,21 @@ public:
 
             while (player->isAlive() && currentMonster->isAlive()) {
                 cout << "-------------------------------" << endl;
+                // Show monster and player information
                 showMonsterInfo(monsterId);
+                showPlayerInfo();
 
-                // Player's turn
-                cout << "your turn!" << endl
-                     << "player status:" << endl;
-                player->showInfo();
+                // Player choose an action
                 int action = chooseBattleAction();
-                player->doAction(action, currentMonster);
 
-                // Monster's turn
-                if (currentMonster->isAlive()) {
-                    cout << "Monster's turn!" << endl;
-                    ((Monster *) currentMonster)->selectAction(player);
-                }
+                // Battle start, both character do their action
+                cout << "Battle!!" << endl;
+                player->doAction(action, currentMonster);
+                ((Monster *)currentMonster)->selectAction(player);
+
+                // Compute the round damage and result
+                player->computeRoundResult();
+                currentMonster->computeRoundResult();
             }
 
             monsterId++;

@@ -4,3 +4,4 @@ project(MonsterKiller)
 set(CMAKE_CXX_STANDARD 14)
 
 add_executable(MonsterKiller main.cpp)
+add_executable(MonsterKillerSample sample.cpp)
